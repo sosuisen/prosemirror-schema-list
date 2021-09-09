@@ -167,15 +167,22 @@ export function liftListItem(itemType) {
     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType)
     if (!range) return false
     if (!dispatch) return true
-    if ($from.node(range.depth - 1).type == itemType) // Inside a parent list
-      return liftToOuterList(state, dispatch, itemType, range)
-    else // Outer list node
-      return liftOutOfList(state, dispatch, range)
+    if ($from.node(range.depth - 1).type == itemType) {
+      // Inside a parent list
+      console.log('liftListItem: Inside a parent list!!');
+      return liftToOuterList(state, dispatch, itemType, range);
+    }
+    else {
+      // Outer list node
+      console.log('liftListItem: Outer list node');
+      return liftOutOfList(state, dispatch, range);
+    }
   }
 }
 
 function liftToOuterList(state, dispatch, itemType, range) {
   let tr = state.tr, end = range.end, endOfList = range.$to.end(range.depth)
+  console.log(`end: ${end}, endOfList: ${endOfList}`);
   if (end < endOfList) {
     // There are siblings after the lifted items, which must become
     // children of the last item

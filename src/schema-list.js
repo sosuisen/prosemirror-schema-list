@@ -1,4 +1,4 @@
-import {findWrapping, liftTarget, canSplit, ReplaceAroundStep} from "prosemirror-transform"
+import {findWrapping, liftTarget, canSplit, ReplaceAroundStep, ReplaceStep} from "prosemirror-transform"
 import {Slice, Fragment, NodeRange} from "prosemirror-model"
 
 const olDOM = ["ol", 0], ulDOM = ["ul", 0], liDOM = ["li", 0]
@@ -163,8 +163,18 @@ export function splitListItem(itemType) {
 // a wrapping list.
 export function liftListItem(itemType) {
   return function(state, dispatch) {
+    console.log(state.doc.toString());
     let {$from, $to} = state.selection
+    console.log(`from: ${$from.pos}, to: ${$to.pos}`);
     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType)
+    /**
+     * blockRange returns a NodeRange based on the place where this position and the given position diverge around block content.
+     * If both point into the same textblock, for example, a range around that textblock will be returned. 
+     * If they point into different blocks, the range around those blocks in their shared ancestor is returned
+     * 
+     */
+     console.log(`range.$from: ${range.$from.pos}, $to: ${range.$to.pos}`);
+     console.log(`range.start: ${range.start}, end: ${range.end}, depth: ${range.depth}`);
     if (!range) return false
     if (!dispatch) return true
     if ($from.node(range.depth - 1).type == itemType) {
@@ -174,7 +184,7 @@ export function liftListItem(itemType) {
     }
     else {
       // Outer list node
-      console.log('liftListItem: Outer list node');
+      console.log('liftListItem: Outer list node');g
       return liftOutOfList(state, dispatch, range);
     }
   }
@@ -182,10 +192,12 @@ export function liftListItem(itemType) {
 
 function liftToOuterList(state, dispatch, itemType, range) {
   let tr = state.tr, end = range.end, endOfList = range.$to.end(range.depth)
-  console.log(`end: ${end}, endOfList: ${endOfList}`);
+  console.log(`end: ${end}, startOfList: ${range.$to.start(range.depth)}, endOfList: ${endOfList}`);
   if (end < endOfList) {
     // There are siblings after the lifted items, which must become
     // children of the last item
+    console.log(`Parent: ${range.parent.toString()}`);
+    console.log(`Fragment: ${Fragment.from(itemType.create(null, range.parent.copy())).toString()}`);
     tr.step(new ReplaceAroundStep(end - 1, endOfList, end, endOfList,
                                   new Slice(Fragment.from(itemType.create(null, range.parent.copy())), 1, 0), 1, true))
     range = new NodeRange(tr.doc.resolve(range.$from.pos), tr.doc.resolve(endOfList), range.depth)

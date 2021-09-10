@@ -24,4 +24,5 @@ The following functions are [commands](/docs/guide/#commands):
 @wrapInList
 @splitListItem
 @liftListItem
+@popListItem
 @sinkListItem

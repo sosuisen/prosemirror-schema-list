@@ -167,12 +167,6 @@ export function liftListItem(itemType) {
     let {$from, $to} = state.selection
     console.log(`from: ${$from.pos}, to: ${$to.pos}`);
     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType)
-    /**
-     * blockRange returns a NodeRange based on the place where this position and the given position diverge around block content.
-     * If both point into the same textblock, for example, a range around that textblock will be returned. 
-     * If they point into different blocks, the range around those blocks in their shared ancestor is returned
-     * 
-     */
      console.log(`range.$from: ${range.$from.pos}, $to: ${range.$to.pos}`);
      console.log(`range.start: ${range.start}, end: ${range.end}, depth: ${range.depth}`);
     if (!range) return false
@@ -180,7 +174,8 @@ export function liftListItem(itemType) {
     if ($from.node(range.depth - 1).type == itemType) {
       // Inside a parent list
       console.log('liftListItem: Inside a parent list!!');
-      return liftToOuterList(state, dispatch, itemType, range);
+      // return liftToOuterList(state, dispatch, itemType, range);
+      return popToOuterList(state, dispatch, itemType, range);
     }
     else {
       // Outer list node
@@ -197,10 +192,31 @@ function liftToOuterList(state, dispatch, itemType, range) {
     // There are siblings after the lifted items, which must become
     // children of the last item
     console.log(`Parent: ${range.parent.toString()}`);
+    console.log(`parent.copy() creates empty node of parent's markup: ${range.parent.copy()}`);
+    console.log(`create ListItem: ${itemType.create(null, range.parent.copy())}`);
     console.log(`Fragment: ${Fragment.from(itemType.create(null, range.parent.copy())).toString()}`);
     tr.step(new ReplaceAroundStep(end - 1, endOfList, end, endOfList,
                                   new Slice(Fragment.from(itemType.create(null, range.parent.copy())), 1, 0), 1, true))
     range = new NodeRange(tr.doc.resolve(range.$from.pos), tr.doc.resolve(endOfList), range.depth)
+  }
+  dispatch(tr.lift(range, liftTarget(range)).scrollIntoView())
+  return true
+}
+
+function popToOuterList(state, dispatch, itemType, range) {
+  let tr = state.tr, end = range.end, endOfList = range.$to.end(range.depth)
+  console.log(`end: ${end}, startOfList: ${range.$from.start(range.depth)}, endOfList: ${endOfList}`);
+  if (end < endOfList) {
+    // There are siblings after the lifted items. Move the lifted items after them.
+    const lifted = state.doc.slice(range.start, end);    
+    const siblings = state.doc.slice(end, endOfList);
+    console.log(`Lifted items: ${lifted}`);
+    console.log(`Siblings after the lifted items: ${siblings}`);
+    const moved = siblings.insertAt(endOfList - end, lifted.content);
+    console.log(`Moved: ${moved}`);
+    tr.step(new ReplaceStep(range.start, endOfList, moved))
+    console.log('Applied:' + tr.doc.toString());
+    range = new NodeRange(tr.doc.resolve(endOfList - (range.end - range.start)), tr.doc.resolve(endOfList), range.depth)
   }
   dispatch(tr.lift(range, liftTarget(range)).scrollIntoView())
   return true

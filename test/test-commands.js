@@ -1,7 +1,7 @@
 const {EditorState, Selection, TextSelection, NodeSelection} = require("prosemirror-state")
 const {schema, eq, doc, blockquote, p, li, ol, ul} = require("prosemirror-test-builder")
 const ist = require("ist")
-const {wrapInList, splitListItem, liftListItem, sinkListItem} = require("..")
+const {wrapInList, splitListItem, liftListItem, popListItem, sinkListItem} = require("..")
 
 function selFor(doc) {
   let a = doc.tag.a
@@ -16,7 +16,6 @@ function selFor(doc) {
 function apply(doc, command, result) {
   let state = EditorState.create({doc, selection: selFor(doc)})
   command(state, tr => state = state.apply(tr))
-  console.log('# doc: ' + state.doc);
   ist(state.doc, result || doc, eq)
   if (result && result.tag.a != null) ist(state.selection,  selFor(result), eq)
 }
@@ -88,14 +87,9 @@ describe("splitListItem", () => {
 describe("liftListItem", () => {
   let lift = liftListItem(schema.nodes.list_item)
 
-  /*
   it("can lift from a nested list", () =>
      apply(doc(ul(li(p("hello"), ul(li(p("o<a><b>ne")), li(p("two")))))), lift,
            doc(ul(li(p("hello")), li(p("one"), ul(li(p("two"))))))))
-  */
-  it.only("can lift from a nested list (revised)", () =>
-           apply(doc(ul(li(p("hello"), ul(li(p("o<a><b>ne")), li(p("two")))))), lift,
-                 doc(ul(li(p("hello"), ul(li(p("two")))), li(p("one"), )))))
       
   it("can lift two items from a nested list", () =>
      apply(doc(ul(li(p("hello"), ul(li(p("o<a>ne")), li(p("two<b>")))))), lift,
@@ -123,6 +117,42 @@ describe("liftListItem", () => {
 
   it("can lift the last item from a list", () =>
      apply(doc(ul(li(p("a")), li(p("b")), li(p("c<a>")))), lift,
+           doc(ul(li(p("a")), li(p("b"))), p("c"))))
+})
+
+describe("popListItem", () => {
+  let pop = popListItem(schema.nodes.list_item)
+
+  it("can pop from a nested list", () =>
+           apply(doc(ul(li(p("hello"), ul(li(p("o<a><b>ne")), li(p("two")))))), pop,
+           doc(ul(li(p("hello"), ul(li(p("two")))), li(p("one"))))))
+      
+  it("can pop two items from a nested list", () =>
+     apply(doc(ul(li(p("hello"), ul(li(p("o<a>ne")), li(p("two<b>")))))), pop,
+           doc(ul(li(p("hello")), li(p("one")), li(p("two"))))))
+
+  it("can pop two items from a nested three-item list", () =>
+     apply(doc(ul(li(p("hello"), ul(li(p("o<a>ne")), li(p("two<b>")), li(p("three")))))), pop,
+          doc(ul(li(p("hello"), ul(li(p("three")))), li(p("one")), li(p("two"))))))
+
+  it("can pop an item out of a list", () =>
+     apply(doc(p("a"), ul(li(p("b<a>"))), p("c")), pop,
+           doc(p("a"), p("b"), p("c"))))
+
+  it("can pop two items out of a list", () =>
+     apply(doc(p("a"), ul(li(p("b<a>")), li(p("c<b>"))), p("d")), pop,
+           doc(p("a"), p("b"), p("c"), p("d"))))
+
+  it("can pop three items from the middle of a list", () =>
+     apply(doc(ul(li(p("a")), li(p("b<a>")), li(p("c")), li(p("d<b>")), li(p("e")))), pop,
+           doc(ul(li(p("a")), li(p("e"))), p("b"), p("c"), p("d"))))
+
+  it("can pop the first item from a list", () =>
+     apply(doc(ul(li(p("a<a>")), li(p("b")), li(p("c")))), pop,
+           doc(ul(li(p("b")), li(p("c"))), p("a"))))
+
+  it("can pop the last item from a list", () =>
+     apply(doc(ul(li(p("a")), li(p("b")), li(p("c<a>")))), pop,
            doc(ul(li(p("a")), li(p("b"))), p("c"))))
 })
 

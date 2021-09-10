@@ -163,23 +163,17 @@ export function splitListItem(itemType) {
 // a wrapping list.
 export function liftListItem(itemType) {
   return function(state, dispatch) {
-    console.log(state.doc.toString());
+    // console.log(state.doc.toString());
     let {$from, $to} = state.selection
-    console.log(`from: ${$from.pos}, to: ${$to.pos}`);
     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType)
-     console.log(`range.$from: ${range.$from.pos}, $to: ${range.$to.pos}`);
-     console.log(`range.start: ${range.start}, end: ${range.end}, depth: ${range.depth}`);
     if (!range) return false
     if (!dispatch) return true
     if ($from.node(range.depth - 1).type == itemType) {
       // Inside a parent list
-      console.log('liftListItem: Inside a parent list!!');
-      // return liftToOuterList(state, dispatch, itemType, range);
-      return popToOuterList(state, dispatch, itemType, range);
+      return liftToOuterList(state, dispatch, itemType, range);
     }
     else {
       // Outer list node
-      console.log('liftListItem: Outer list node');g
       return liftOutOfList(state, dispatch, range);
     }
   }
@@ -187,14 +181,14 @@ export function liftListItem(itemType) {
 
 function liftToOuterList(state, dispatch, itemType, range) {
   let tr = state.tr, end = range.end, endOfList = range.$to.end(range.depth)
-  console.log(`end: ${end}, startOfList: ${range.$to.start(range.depth)}, endOfList: ${endOfList}`);
+  // console.log(`end: ${end}, startOfList: ${range.$to.start(range.depth)}, endOfList: ${endOfList}`);
   if (end < endOfList) {
     // There are siblings after the lifted items, which must become
     // children of the last item
-    console.log(`Parent: ${range.parent.toString()}`);
-    console.log(`parent.copy() creates empty node of parent's markup: ${range.parent.copy()}`);
-    console.log(`create ListItem: ${itemType.create(null, range.parent.copy())}`);
-    console.log(`Fragment: ${Fragment.from(itemType.create(null, range.parent.copy())).toString()}`);
+    // console.log(`Parent: ${range.parent.toString()}`);
+    // console.log(`parent.copy() creates empty node of parent's markup: ${range.parent.copy()}`);
+    // console.log(`create ListItem: ${itemType.create(null, range.parent.copy())}`);
+    // console.log(`Fragment: ${Fragment.from(itemType.create(null, range.parent.copy())).toString()}`);
     tr.step(new ReplaceAroundStep(end - 1, endOfList, end, endOfList,
                                   new Slice(Fragment.from(itemType.create(null, range.parent.copy())), 1, 0), 1, true))
     range = new NodeRange(tr.doc.resolve(range.$from.pos), tr.doc.resolve(endOfList), range.depth)
@@ -203,27 +197,93 @@ function liftToOuterList(state, dispatch, itemType, range) {
   return true
 }
 
-function popToOuterList(state, dispatch, itemType, range) {
-  let tr = state.tr, end = range.end, endOfList = range.$to.end(range.depth)
-  console.log(`end: ${end}, startOfList: ${range.$from.start(range.depth)}, endOfList: ${endOfList}`);
-  if (end < endOfList) {
-    // There are siblings after the lifted items. Move the lifted items after them.
-    const lifted = state.doc.slice(range.start, end);    
-    const siblings = state.doc.slice(end, endOfList);
-    console.log(`Lifted items: ${lifted}`);
-    console.log(`Siblings after the lifted items: ${siblings}`);
-    const moved = siblings.insertAt(endOfList - end, lifted.content);
-    console.log(`Moved: ${moved}`);
-    tr.step(new ReplaceStep(range.start, endOfList, moved))
-    console.log('Applied:' + tr.doc.toString());
-    range = new NodeRange(tr.doc.resolve(endOfList - (range.end - range.start)), tr.doc.resolve(endOfList), range.depth)
+function liftOutOfList(state, dispatch, range) {
+  let tr = state.tr, list = range.parent
+  // Merge the list items into a single big item
+  for (let pos = range.end, i = range.endIndex - 1, e = range.startIndex; i > e; i--) {
+    pos -= list.child(i).nodeSize
+    tr.delete(pos - 1, pos + 1)
   }
-  dispatch(tr.lift(range, liftTarget(range)).scrollIntoView())
+  let $start = tr.doc.resolve(range.start), item = $start.nodeAfter
+  let atStart = range.startIndex == 0, atEnd = range.endIndex == list.childCount
+  let parent = $start.node(-1), indexBefore = $start.index(-1)
+  if (!parent.canReplace(indexBefore + (atStart ? 0 : 1), indexBefore + 1,
+                         item.content.append(atEnd ? Fragment.empty : Fragment.from(list))))
+    return false
+  let start = $start.pos, end = start + item.nodeSize
+  // Strip off the surrounding list. At the sides where we're not at
+  // the end of the list, the existing list is closed. At sides where
+  // this is the end, it is overwritten to its end.
+  tr.step(new ReplaceAroundStep(start - (atStart ? 1 : 0), end + (atEnd ? 1 : 0), start + 1, end - 1,
+                                new Slice((atStart ? Fragment.empty : Fragment.from(list.copy(Fragment.empty)))
+                                          .append(atEnd ? Fragment.empty : Fragment.from(list.copy(Fragment.empty))),
+                                          atStart ? 0 : 1, atEnd ? 0 : 1), atStart ? 0 : 1))
+  dispatch(tr.scrollIntoView())
   return true
 }
 
-function liftOutOfList(state, dispatch, range) {
-  let tr = state.tr, list = range.parent
+// :: (NodeType) → (state: EditorState, dispatch: ?(tr: Transaction)) → bool
+// Create a command to lift the list item around the selection up into
+// a wrapping list. 
+// The siblings after the lifted items remains children of the parent.
+export function popListItem(itemType) {
+  return function(state, dispatch) {
+    // console.log(state.doc.toString());
+    let {$from, $to} = state.selection
+    let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType)
+    if (!range) return false
+    if (!dispatch) return true
+    if ($from.node(range.depth - 1).type == itemType) {
+      // Inside a parent list
+      // console.log('liftListItem: Inside a parent list');
+      return popToOuterList(state, dispatch, itemType, range);
+    }
+    else {
+      // Outer list node
+      // console.log('liftListItem: Outer list node');
+      return popOutOfList(state, dispatch, range);
+    }
+  }
+}
+
+function popToOuterList(state, dispatch, itemType, range) {
+  let tr = state.tr, endOfList = range.$to.end(range.depth)
+  // console.log(`range.start: ${range.start}, end: ${range.end}, depth: ${range.depth}`);
+  // console.log(`startOfList: ${range.$from.start(range.depth)}, endOfList: ${endOfList}`);
+  if (range.end < endOfList) {
+    // There are siblings after the lifting items. Move the lifting items after them.
+    const lifting = state.doc.slice(range.start, range.end);    
+    const siblings = state.doc.slice(range.end, endOfList);
+    // console.log(`Lifting items: ${lifting}`);
+    // console.log(`Siblings after the lifting items: ${siblings}`);
+    const moved = siblings.insertAt(endOfList - range.end, lifting.content);
+    // console.log(`Moved: ${moved}`);
+    tr.step(new ReplaceStep(range.start, endOfList, moved))
+    // console.log('Applied:' + tr.doc.toString());
+    range = new NodeRange(tr.doc.resolve(endOfList - (range.end - range.start)), tr.doc.resolve(endOfList), range.depth)
+  }
+  dispatch(tr.lift(range, liftTarget(range)).scrollIntoView())
+  // console.log('Lifted:' + tr.doc.toString());
+  return true
+}
+
+function popOutOfList(state, dispatch, range) {
+  let tr = state.tr, list = range.parent, endOfList = range.$to.end(range.depth)
+
+  // console.log(`range.start: ${range.start}, end: ${range.end}, depth: ${range.depth}`);
+  // console.log(`startOfList: ${range.$from.start(range.depth)}, endOfList: ${endOfList}`);
+  if (range.end < endOfList) {
+    // There are siblings after the lifting items. Move the lifting items after them.
+    const lifting = state.doc.slice(range.start, range.end);    
+    const siblings = state.doc.slice(range.end, endOfList);
+    // console.log(`Lifting items: ${lifting}`);
+    // console.log(`Siblings after the lifting items: ${siblings}`);
+    const moved = siblings.insertAt(endOfList - range.end, lifting.content);
+    // console.log(`Moved: ${moved}`);
+    tr.step(new ReplaceStep(range.start, endOfList, moved))
+    // console.log('Applied:' + tr.doc.toString());
+    range = new NodeRange(tr.doc.resolve(endOfList - (range.end - range.start)), tr.doc.resolve(endOfList), range.depth)
+  }
   // Merge the list items into a single big item
   for (let pos = range.end, i = range.endIndex - 1, e = range.startIndex; i > e; i--) {
     pos -= list.child(i).nodeSize

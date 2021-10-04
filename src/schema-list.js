@@ -153,6 +153,34 @@ export function splitListItem(itemType) {
     let tr = state.tr.delete($from.pos, $to.pos)
     let types = nextType && [null, {type: nextType}]
     if (!canSplit(tr.doc, $from.pos, 2, types)) return false
+
+    // Add a new child just after this list-item when the list-item has one or more children.
+    const range = $from.blockRange($to);
+    let createChild = false;
+    const parentStart = $from.before($from.depth - 1); // start position of parent
+    if ($to.pos === range.end - 1) {
+      range.parent.forEach((child, offset) => {
+        if (!createChild) {
+          if (child.type.name === 'bullet_list' || child.type.name === 'ordered_list') {
+            if (dispatch) {
+              // e.g.) <ul><li><p>xxx</p><ul><li><p>
+              // parentStart from heading <ul> mark is 1.
+              // Extra 1 is length of parent <li> mark.
+              // Offset is 5. It is child <ul>'s offset from just after parent <li> mark.
+              // 3 is length of child's <ul><li><p> marks.
+              const splitPos = parentStart + 1 + offset + 3;
+              // Don't use state.doc in chained Transforms because the state is persistent.
+              // Use tr.doc to get the updated document in the current chain.
+              dispatch(tr.split(splitPos, 2, types).setSelection(new TextSelection(tr.doc.resolve(splitPos))).scrollIntoView());
+              console.log(state.doc.toString());
+            }
+            createChild = true;
+          }
+        }
+      });
+    }
+    if (createChild) return true;
+
     if (dispatch) dispatch(tr.split($from.pos, 2, types).scrollIntoView())
     return true
   }

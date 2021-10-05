@@ -1,5 +1,6 @@
 import {findWrapping, liftTarget, canSplit, ReplaceAroundStep, ReplaceStep} from "prosemirror-transform"
 import {Slice, Fragment, NodeRange} from "prosemirror-model"
+import { TextSelection } from 'prosemirror-state';
 
 const olDOM = ["ol", 0], ulDOM = ["ul", 0], liDOM = ["li", 0]
 

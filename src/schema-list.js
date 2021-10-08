@@ -370,15 +370,20 @@ export function slideUpListItem(itemType) {
      // let range = $from.blockRange($to); // <p>...</p>
      let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType) // <li>...</li>
      if (!range) return false
-     if (!dispatch) return true
+     if (!dispatch) return true  
+    
      console.log(`selected range ${range.start} : ${range.end}`);
      console.log('### BEFORE SELECTION');
      const sameDepthBefore = [];
+     let lastPosition = 0;
+     let lastNodeSize = 0;
      state.doc.nodesBetween(0, range.start, (node, pos, parent, index) => {
       const info = `(${node.type.name}) pos: ${pos}, depth: ${state.doc.resolve(pos).depth} in ${parent.type.name} at ${index}`;
       console.log(info);
       if (node.type.name === itemType.name && state.doc.resolve(pos).depth === range.depth) {
        sameDepthBefore.push(info);
+       lastPosition = pos;
+       lastNodeSize = node.nodeSize;
       }
       if (node.type.name === 'text') {
         console.log(`  # ${node.text}`);
@@ -405,6 +410,20 @@ export function slideUpListItem(itemType) {
      sameDepthAfter.forEach(info => {
       console.log(info);
      });
+
+     console.log('\nDo slideUp');
+     
+     if (lastPosition === 0) {
+       return false;
+     }
+     console.log('move to: ' + (lastPosition + lastNodeSize));
+     const slice = state.doc.slice(range.start, range.end);
+     console.log(slice.toString());
+     const tr = state.tr;
+     tr.delete(range.start, range.end);
+     tr.replace(lastPosition + lastNodeSize, lastPosition + lastNodeSize, slice);
+     dispatch(tr.scrollIntoView());
+//      .step(new ReplaceStep(lastPosition + lastNodeSize, lastPosition + lastNodeSize, slice, false)).scrollIntoView());
 
      return true;
   }

@@ -1,7 +1,7 @@
 const {EditorState, Selection, TextSelection, NodeSelection} = require("prosemirror-state")
 const {schema, eq, doc, blockquote, p, li, ol, ul} = require("prosemirror-test-builder")
 const ist = require("ist")
-const {wrapInList, splitListItem, liftListItem, popListItem, sinkListItem} = require("..")
+const {wrapInList, splitListItem, liftListItem, popListItem, sinkListItem, slideUpListItem} = require("..")
 
 function selFor(doc) {
   let a = doc.tag.a
@@ -170,3 +170,23 @@ describe("sinkListItem", () => {
      apply(doc(ul(li(p("one")), li(p("..."), ul(li(p("two")))), li(p("t<a><b>hree")))), sink,
            doc(ul(li(p("one")), li(p("..."), ul(li(p("two")), li(p("three"))))))))
 })
+
+describe.only("slideUpListItem", () => {
+  let slideUp = slideUpListItem(schema.nodes.list_item)
+
+  it("get nodesBetween", () =>
+          apply(
+            doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
+                  li(p("2"), ul(li(p("2<a><b>-1"), ul(li(p("2-1-1")))))),
+                  li(p("3"), ul(li(p("3-1"), ul(li(p("3-1-1"))))))
+                )
+              ),
+            slideUp,
+            doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
+                  li(p("2"), ul(li(p("2<a><b>-1"), ul(li(p("2-1-1")))))),
+                  li(p("3"), ul(li(p("3-1"), ul(li(p("3-1-1"))))))
+                )
+              )
+          )
+  );
+});

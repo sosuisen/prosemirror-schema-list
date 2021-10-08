@@ -362,3 +362,50 @@ export function sinkListItem(itemType) {
     return true
   }
 }
+
+export function slideUpListItem(itemType) {
+  return function(state, dispatch) {
+    console.log(state.doc.toString());
+     let {$from, $to} = state.selection
+     // let range = $from.blockRange($to); // <p>...</p>
+     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType) // <li>...</li>
+     if (!range) return false
+     if (!dispatch) return true
+     console.log(`selected range ${range.start} : ${range.end}`);
+     console.log('### BEFORE SELECTION');
+     const sameDepthBefore = [];
+     state.doc.nodesBetween(0, range.start, (node, pos, parent, index) => {
+      const info = `(${node.type.name}) pos: ${pos}, depth: ${state.doc.resolve(pos).depth} in ${parent.type.name} at ${index}`;
+      console.log(info);
+      if (node.type.name === itemType.name && state.doc.resolve(pos).depth === range.depth) {
+       sameDepthBefore.push(info);
+      }
+      if (node.type.name === 'text') {
+        console.log(`  # ${node.text}`);
+       }
+     })
+     console.log("\n---\nSame depth before:");
+     sameDepthBefore.forEach(info => {
+      console.log(info);
+     });
+
+     console.log('\n\n### AFTER SELECTION');
+     const sameDepthAfter = [];
+     state.doc.nodesBetween(range.end, state.doc.content.size, (node, pos, parent, index) => {
+      const info = `(${node.type.name}) pos: ${pos}, depth: ${state.doc.resolve(pos).depth} in ${parent.type.name} at ${index}`;
+      console.log(info);
+      if (node.type.name === itemType.name && state.doc.resolve(pos).depth === range.depth) {
+       sameDepthAfter.push(info);
+      }
+       if (node.type.name === 'text') {
+        console.log(`  # ${node.text}`);
+       }
+     })
+     console.log("\n---\nSame depth after:");
+     sameDepthAfter.forEach(info => {
+      console.log(info);
+     });
+
+     return true;
+  }
+}

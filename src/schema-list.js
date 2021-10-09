@@ -374,6 +374,9 @@ export function slideUpListItem(itemType) {
     if (!range) return false
     if (!dispatch) return true
 
+    const selectionOffsetFrom = $from.pos - range.start;
+    const selectionOffsetTo = $to.pos - range.start;
+
     const $rangeStart = state.doc.resolve(range.start);
     const parentStartPos = $rangeStart.blockRange($rangeStart).start;
 
@@ -434,27 +437,32 @@ export function slideUpListItem(itemType) {
     else {
       tr.delete(range.start, range.end);
     }
+
+    let moveTo = 0;
     if (relationship === 'sibling') {
       const slice = state.doc.slice(range.start, range.end);
       //    console.log(slice.toString());
-
-      tr.replace(lastPosition, lastPosition, slice);
+      moveTo = lastPosition;
+      tr.replace(moveTo, moveTo, slice);
     }
     else if (relationship === 'cousin') {
       const slice = state.doc.slice(range.start, range.end);
       //    console.log(slice.toString());
-
-      tr.replace(lastPosition + lastNodeSize, lastPosition + lastNodeSize, slice);
+      moveTo = lastPosition + lastNodeSize;
+      tr.replace(moveTo, moveTo, slice);
     }
     else if (relationship === 'uncle') {
       const slice = state.doc.slice(range.start, range.end);
       //      console.log(slice.toString());
-
       const listNode = range.parent.copy(slice.content); // Create <ul><li>xxx</li></ul>
       const tmpNode = itemType.create(null, listNode); // Create <li><ul><li>xxx</li></ul></li> temporally
       const newSlice = tmpNode.slice(0); // Slice drops wrapping tags. Result slice is <ul><li>xxx</li></ul>
-      tr.replace(lastPosition + lastNodeSize - 1, lastPosition + lastNodeSize - 1, newSlice);
+      moveTo = lastPosition + lastNodeSize - 1
+      tr.replace(moveTo, moveTo, newSlice);
     }
+    
+    tr.setSelection(new TextSelection(tr.doc.resolve(moveTo + selectionOffsetFrom), tr.doc.resolve(moveTo + selectionOffsetTo)));
+
     dispatch(tr.scrollIntoView());
     //     console.log(tr.doc.toString());
 
@@ -471,6 +479,9 @@ export function slideDownListItem(itemType) {
     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType) // <li>...</li>
     if (!range) return false
     if (!dispatch) return true
+
+    const selectionOffsetFrom = $from.pos - range.start;
+    const selectionOffsetTo = $to.pos - range.start;
 
     const $rangeStart = state.doc.resolve(range.start);
     const parentStartPos = $rangeStart.blockRange($rangeStart).start;
@@ -542,18 +553,21 @@ export function slideDownListItem(itemType) {
       tr.delete(range.start, range.end);
     }
 
+    let moveTo = 0;
     // console.log(tr.doc.toString());
     if (relationship === 'sibling') {
       const slice = state.doc.slice(range.start, range.end);
       // console.log(slice.toString());
       // console.log(firstPosition + firstNodeSize - deletedSize);
-      tr.replace(firstPosition + firstNodeSize - deletedSize, firstPosition + firstNodeSize - deletedSize, slice);
+      moveTo = firstPosition + firstNodeSize - deletedSize;
+      tr.replace(moveTo, moveTo, slice);
     }
     else if (relationship === 'cousin') {
       const slice = state.doc.slice(range.start, range.end);
       // console.log(slice.toString());
       // console.log(firstPosition - deletedSize);
-      tr.replace(firstPosition - deletedSize, firstPosition - deletedSize, slice);
+      moveTo = firstPosition - deletedSize;
+      tr.replace(moveTo, moveTo, slice);
     }
     else if (relationship === 'uncle') {
       const slice = state.doc.slice(range.start, range.end);
@@ -564,8 +578,12 @@ export function slideDownListItem(itemType) {
       const tmpNode = itemType.create(null, listNode); // Create <li><ul><li>xxx</li></ul></li> temporally
       const newSlice = tmpNode.slice(0); // Slice drops wrapping tags. Result slice is <ul><li>xxx</li></ul>
       // console.log('newSlice: ' + newSlice.toString());
-      tr.replace(firstPosition + firstNodeSize- deletedSize - 1, firstPosition + firstNodeSize - deletedSize - 1, newSlice);
+      moveTo = firstPosition + firstNodeSize- deletedSize - 1;
+      tr.replace(moveTo, moveTo, newSlice);
     }
+    
+    tr.setSelection(new TextSelection(tr.doc.resolve(moveTo + selectionOffsetFrom), tr.doc.resolve(moveTo + selectionOffsetTo)));
+
     dispatch(tr.scrollIntoView());
     // console.log(tr.doc.toString());
 

@@ -1,5 +1,5 @@
-import {findWrapping, liftTarget, canSplit, ReplaceAroundStep, ReplaceStep} from "prosemirror-transform"
-import {Slice, Fragment, NodeRange} from "prosemirror-model"
+import { findWrapping, liftTarget, canSplit, ReplaceAroundStep, ReplaceStep } from "prosemirror-transform"
+import { Slice, Fragment, NodeRange } from "prosemirror-model"
 import { TextSelection } from 'prosemirror-state';
 
 const olDOM = ["ol", 0], ulDOM = ["ul", 0], liDOM = ["li", 0]
@@ -10,26 +10,28 @@ const olDOM = ["ol", 0], ulDOM = ["ul", 0], liDOM = ["li", 0]
 // starts counting, and defaults to 1. Represented as an `<ol>`
 // element.
 export const orderedList = {
-  attrs: {order: {default: 1}},
-  parseDOM: [{tag: "ol", getAttrs(dom) {
-    return {order: dom.hasAttribute("start") ? +dom.getAttribute("start") : 1}
-  }}],
+  attrs: { order: { default: 1 } },
+  parseDOM: [{
+    tag: "ol", getAttrs(dom) {
+      return { order: dom.hasAttribute("start") ? +dom.getAttribute("start") : 1 }
+    }
+  }],
   toDOM(node) {
-    return node.attrs.order == 1 ? olDOM : ["ol", {start: node.attrs.order}, 0]
+    return node.attrs.order == 1 ? olDOM : ["ol", { start: node.attrs.order }, 0]
   }
 }
 
 // :: NodeSpec
 // A bullet list node spec, represented in the DOM as `<ul>`.
 export const bulletList = {
-  parseDOM: [{tag: "ul"}],
+  parseDOM: [{ tag: "ul" }],
   toDOM() { return ulDOM }
 }
 
 // :: NodeSpec
 // A list item (`<li>`) spec.
 export const listItem = {
-  parseDOM: [{tag: "li"}],
+  parseDOM: [{ tag: "li" }],
   toDOM() { return liDOM },
   defining: true
 }
@@ -56,9 +58,9 @@ function add(obj, props) {
 // `"block"`.
 export function addListNodes(nodes, itemContent, listGroup) {
   return nodes.append({
-    ordered_list: add(orderedList, {content: "list_item+", group: listGroup}),
-    bullet_list: add(bulletList, {content: "list_item+", group: listGroup}),
-    list_item: add(listItem, {content: itemContent})
+    ordered_list: add(orderedList, { content: "list_item+", group: listGroup }),
+    bullet_list: add(bulletList, { content: "list_item+", group: listGroup }),
+    list_item: add(listItem, { content: itemContent })
   })
 }
 
@@ -68,8 +70,8 @@ export function addListNodes(nodes, itemContent, listGroup) {
 // value to indicate whether this is possible, but don't actually
 // perform the change.
 export function wrapInList(listType, attrs) {
-  return function(state, dispatch) {
-    let {$from, $to} = state.selection
+  return function (state, dispatch) {
+    let { $from, $to } = state.selection
     let range = $from.blockRange($to), doJoin = false, outerRange = range
     if (!range) return false
     // This is at the top of an existing list item
@@ -95,7 +97,7 @@ function doWrapInList(tr, range, wrappers, joinBefore, listType) {
     content = Fragment.from(wrappers[i].type.create(wrappers[i].attrs, content))
 
   tr.step(new ReplaceAroundStep(range.start - (joinBefore ? 2 : 0), range.end, range.start, range.end,
-                                new Slice(content, 0, 0), wrappers.length, true))
+    new Slice(content, 0, 0), wrappers.length, true))
 
   let found = 0
   for (let i = 0; i < wrappers.length; i++) if (wrappers[i].type == listType) found = i + 1
@@ -116,8 +118,8 @@ function doWrapInList(tr, range, wrappers, joinBefore, listType) {
 // Build a command that splits a non-empty textblock at the top level
 // of a list item by also splitting that list item.
 export function splitListItem(itemType) {
-  return function(state, dispatch) {
-    let {$from, $to, node} = state.selection
+  return function (state, dispatch) {
+    let { $from, $to, node } = state.selection
     if ((node && node.isBlock) || $from.depth < 2 || !$from.sameParent($to)) return false
     let grandParent = $from.node(-1)
     if (grandParent.type != itemType) return false
@@ -126,7 +128,7 @@ export function splitListItem(itemType) {
       // list item should be split. Otherwise, bail out and let next
       // command handle lifting.
       if ($from.depth == 2 || $from.node(-3).type != itemType ||
-          $from.index(-2) != $from.node(-2).childCount - 1) return false
+        $from.index(-2) != $from.node(-2).childCount - 1) return false
       if (dispatch) {
         let wrap = Fragment.empty
         let depthBefore = $from.index(-1) ? 1 : $from.index(-2) ? 2 : 3
@@ -135,7 +137,7 @@ export function splitListItem(itemType) {
         for (let d = $from.depth - depthBefore; d >= $from.depth - 3; d--)
           wrap = Fragment.from($from.node(d).copy(wrap))
         let depthAfter = $from.indexAfter(-1) < $from.node(-2).childCount ? 1
-            : $from.indexAfter(-2) < $from.node(-3).childCount ? 2 : 3
+          : $from.indexAfter(-2) < $from.node(-3).childCount ? 2 : 3
         // Add a second list item with an empty default start node
         wrap = wrap.append(Fragment.from(itemType.createAndFill()))
         let start = $from.before($from.depth - (depthBefore - 1))
@@ -152,7 +154,7 @@ export function splitListItem(itemType) {
     }
     let nextType = $to.pos == $from.end() ? grandParent.contentMatchAt(0).defaultType : null
     let tr = state.tr.delete($from.pos, $to.pos)
-    let types = nextType && [null, {type: nextType}]
+    let types = nextType && [null, { type: nextType }]
     if (!canSplit(tr.doc, $from.pos, 2, types)) return false
 
     // Add a new child just after this list-item when the list-item has one or more children.
@@ -191,9 +193,9 @@ export function splitListItem(itemType) {
 // Create a command to lift the list item around the selection up into
 // a wrapping list.
 export function liftListItem(itemType) {
-  return function(state, dispatch) {
+  return function (state, dispatch) {
     // console.log(state.doc.toString());
-    let {$from, $to} = state.selection
+    let { $from, $to } = state.selection
     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType)
     if (!range) return false
     if (!dispatch) return true
@@ -219,7 +221,7 @@ function liftToOuterList(state, dispatch, itemType, range) {
     // console.log(`create ListItem: ${itemType.create(null, range.parent.copy())}`);
     // console.log(`Fragment: ${Fragment.from(itemType.create(null, range.parent.copy())).toString()}`);
     tr.step(new ReplaceAroundStep(end - 1, endOfList, end, endOfList,
-                                  new Slice(Fragment.from(itemType.create(null, range.parent.copy())), 1, 0), 1, true))
+      new Slice(Fragment.from(itemType.create(null, range.parent.copy())), 1, 0), 1, true))
     range = new NodeRange(tr.doc.resolve(range.$from.pos), tr.doc.resolve(endOfList), range.depth)
   }
   dispatch(tr.lift(range, liftTarget(range)).scrollIntoView())
@@ -237,16 +239,16 @@ function liftOutOfList(state, dispatch, range) {
   let atStart = range.startIndex == 0, atEnd = range.endIndex == list.childCount
   let parent = $start.node(-1), indexBefore = $start.index(-1)
   if (!parent.canReplace(indexBefore + (atStart ? 0 : 1), indexBefore + 1,
-                         item.content.append(atEnd ? Fragment.empty : Fragment.from(list))))
+    item.content.append(atEnd ? Fragment.empty : Fragment.from(list))))
     return false
   let start = $start.pos, end = start + item.nodeSize
   // Strip off the surrounding list. At the sides where we're not at
   // the end of the list, the existing list is closed. At sides where
   // this is the end, it is overwritten to its end.
   tr.step(new ReplaceAroundStep(start - (atStart ? 1 : 0), end + (atEnd ? 1 : 0), start + 1, end - 1,
-                                new Slice((atStart ? Fragment.empty : Fragment.from(list.copy(Fragment.empty)))
-                                          .append(atEnd ? Fragment.empty : Fragment.from(list.copy(Fragment.empty))),
-                                          atStart ? 0 : 1, atEnd ? 0 : 1), atStart ? 0 : 1))
+    new Slice((atStart ? Fragment.empty : Fragment.from(list.copy(Fragment.empty)))
+      .append(atEnd ? Fragment.empty : Fragment.from(list.copy(Fragment.empty))),
+      atStart ? 0 : 1, atEnd ? 0 : 1), atStart ? 0 : 1))
   dispatch(tr.scrollIntoView())
   return true
 }
@@ -256,9 +258,9 @@ function liftOutOfList(state, dispatch, range) {
 // a wrapping list. 
 // The siblings after the lifted items remains children of the parent.
 export function popListItem(itemType) {
-  return function(state, dispatch) {
+  return function (state, dispatch) {
     // console.log(state.doc.toString());
-    let {$from, $to} = state.selection
+    let { $from, $to } = state.selection
     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType)
     if (!range) return false
     if (!dispatch) return true
@@ -281,7 +283,7 @@ function popToOuterList(state, dispatch, itemType, range) {
   // console.log(`startOfList: ${range.$from.start(range.depth)}, endOfList: ${endOfList}`);
   if (range.end < endOfList) {
     // There are siblings after the lifting items. Move the lifting items after them.
-    const lifting = state.doc.slice(range.start, range.end);    
+    const lifting = state.doc.slice(range.start, range.end);
     const siblings = state.doc.slice(range.end, endOfList);
     // console.log(`Lifting items: ${lifting}`);
     // console.log(`Siblings after the lifting items: ${siblings}`);
@@ -303,7 +305,7 @@ function popOutOfList(state, dispatch, range) {
   // console.log(`startOfList: ${range.$from.start(range.depth)}, endOfList: ${endOfList}`);
   if (range.end < endOfList) {
     // There are siblings after the lifting items. Move the lifting items after them.
-    const lifting = state.doc.slice(range.start, range.end);    
+    const lifting = state.doc.slice(range.start, range.end);
     const siblings = state.doc.slice(range.end, endOfList);
     // console.log(`Lifting items: ${lifting}`);
     // console.log(`Siblings after the lifting items: ${siblings}`);
@@ -322,16 +324,16 @@ function popOutOfList(state, dispatch, range) {
   let atStart = range.startIndex == 0, atEnd = range.endIndex == list.childCount
   let parent = $start.node(-1), indexBefore = $start.index(-1)
   if (!parent.canReplace(indexBefore + (atStart ? 0 : 1), indexBefore + 1,
-                         item.content.append(atEnd ? Fragment.empty : Fragment.from(list))))
+    item.content.append(atEnd ? Fragment.empty : Fragment.from(list))))
     return false
   let start = $start.pos, end = start + item.nodeSize
   // Strip off the surrounding list. At the sides where we're not at
   // the end of the list, the existing list is closed. At sides where
   // this is the end, it is overwritten to its end.
   tr.step(new ReplaceAroundStep(start - (atStart ? 1 : 0), end + (atEnd ? 1 : 0), start + 1, end - 1,
-                                new Slice((atStart ? Fragment.empty : Fragment.from(list.copy(Fragment.empty)))
-                                          .append(atEnd ? Fragment.empty : Fragment.from(list.copy(Fragment.empty))),
-                                          atStart ? 0 : 1, atEnd ? 0 : 1), atStart ? 0 : 1))
+    new Slice((atStart ? Fragment.empty : Fragment.from(list.copy(Fragment.empty)))
+      .append(atEnd ? Fragment.empty : Fragment.from(list.copy(Fragment.empty))),
+      atStart ? 0 : 1, atEnd ? 0 : 1), atStart ? 0 : 1))
   dispatch(tr.scrollIntoView())
   return true
 }
@@ -340,8 +342,8 @@ function popOutOfList(state, dispatch, range) {
 // Create a command to sink the list item around the selection down
 // into an inner list.
 export function sinkListItem(itemType) {
-  return function(state, dispatch) {
-    let {$from, $to} = state.selection
+  return function (state, dispatch) {
+    let { $from, $to } = state.selection
     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType)
     if (!range) return false
     let startIndex = range.startIndex
@@ -353,78 +355,220 @@ export function sinkListItem(itemType) {
       let nestedBefore = nodeBefore.lastChild && nodeBefore.lastChild.type == parent.type
       let inner = Fragment.from(nestedBefore ? itemType.create() : null)
       let slice = new Slice(Fragment.from(itemType.create(null, Fragment.from(parent.type.create(null, inner)))),
-                            nestedBefore ? 3 : 1, 0)
+        nestedBefore ? 3 : 1, 0)
       let before = range.start, after = range.end
       dispatch(state.tr.step(new ReplaceAroundStep(before - (nestedBefore ? 3 : 1), after,
-                                                   before, after, slice, 1, true))
-               .scrollIntoView())
+        before, after, slice, 1, true))
+        .scrollIntoView())
     }
     return true
   }
 }
 
 export function slideUpListItem(itemType) {
-  return function(state, dispatch) {
-    console.log(state.doc.toString());
-     let {$from, $to} = state.selection
-     // let range = $from.blockRange($to); // <p>...</p>
-     let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType) // <li>...</li>
-     if (!range) return false
-     if (!dispatch) return true  
-    
-     console.log(`selected range ${range.start} : ${range.end}`);
-     console.log('### BEFORE SELECTION');
-     const sameDepthBefore = [];
-     let lastPosition = 0;
-     let lastNodeSize = 0;
-     state.doc.nodesBetween(0, range.start, (node, pos, parent, index) => {
+  return function (state, dispatch) {
+    // console.log(state.doc.toString());
+    let { $from, $to } = state.selection
+    // let range = $from.blockRange($to); // <p>...</p>
+    let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType) // <li>...</li>
+    if (!range) return false
+    if (!dispatch) return true
+
+    const $rangeStart = state.doc.resolve(range.start);
+    const parentStartPos = $rangeStart.blockRange($rangeStart).start;
+
+    let relationship = '';
+
+    // console.log(`selected range ${range.start} : ${range.end}`);
+    const sameDepthBefore = [];
+    let lastPosition = 0;
+    let lastNodeSize = 0;
+    state.doc.nodesBetween(0, range.start, (node, pos, parent, index) => {
       const info = `(${node.type.name}) pos: ${pos}, depth: ${state.doc.resolve(pos).depth} in ${parent.type.name} at ${index}`;
-      console.log(info);
-      if (node.type.name === itemType.name && state.doc.resolve(pos).depth === range.depth) {
-       sameDepthBefore.push(info);
-       lastPosition = pos;
-       lastNodeSize = node.nodeSize;
+      // console.log(info);
+      if (pos === 0) return;
+      const $pos = state.doc.resolve(pos);
+      if (node.type === itemType && parentStartPos === $pos.blockRange($pos).start){
+        sameDepthBefore.push(info);
+        lastPosition = pos;
+        lastNodeSize = node.nodeSize;
+        relationship = 'sibling';
+      }
+      else if (node.type === itemType && state.doc.resolve(pos).depth === range.depth) {
+        sameDepthBefore.push(info);
+        lastPosition = pos;
+        lastNodeSize = node.nodeSize;
+        relationship = 'cousin';
+      }
+      else if (node.type === itemType && state.doc.resolve(pos).depth === range.depth - 2) {
+        let hasList = false;
+        node.forEach(child => {
+          if (child.type.name === 'bullet_list' || child.type.name === 'ordered_list') hasList = true;
+        });
+        if (!hasList) {
+          sameDepthBefore.push(info);
+          lastPosition = pos;
+          lastNodeSize = node.nodeSize;
+          relationship = 'uncle';
+        }
       }
       if (node.type.name === 'text') {
-        console.log(`  # ${node.text}`);
-       }
-     })
-     console.log("\n---\nSame depth before:");
-     sameDepthBefore.forEach(info => {
-      console.log(info);
-     });
-
-     console.log('\n\n### AFTER SELECTION');
-     const sameDepthAfter = [];
-     state.doc.nodesBetween(range.end, state.doc.content.size, (node, pos, parent, index) => {
-      const info = `(${node.type.name}) pos: ${pos}, depth: ${state.doc.resolve(pos).depth} in ${parent.type.name} at ${index}`;
-      console.log(info);
-      if (node.type.name === itemType.name && state.doc.resolve(pos).depth === range.depth) {
-       sameDepthAfter.push(info);
+        // console.log(`  # ${node.text}`);
       }
-       if (node.type.name === 'text') {
-        console.log(`  # ${node.text}`);
-       }
-     })
-     console.log("\n---\nSame depth after:");
-     sameDepthAfter.forEach(info => {
+    })
+    /*
+    console.log("\n---\nSame depth before:");
+    sameDepthBefore.forEach(info => {
       console.log(info);
-     });
+    });
+    */
+    if (lastPosition === 0) {
+      return false;
+    }
+    // console.log(`move to: ${relationship} ${lastPosition} + ${lastNodeSize}`);
+    const tr = state.tr;
+    if (range.parent.childCount === 1) {
+      // Delete empty parent
+      tr.delete(range.start - 1, range.end + 1);
+    }
+    else {
+      tr.delete(range.start, range.end);
+    }
+    if (relationship === 'sibling') {
+      const slice = state.doc.slice(range.start, range.end);
+      //    console.log(slice.toString());
 
-     console.log('\nDo slideUp');
-     
-     if (lastPosition === 0) {
-       return false;
-     }
-     console.log('move to: ' + (lastPosition + lastNodeSize));
-     const slice = state.doc.slice(range.start, range.end);
-     console.log(slice.toString());
-     const tr = state.tr;
-     tr.delete(range.start, range.end);
-     tr.replace(lastPosition + lastNodeSize, lastPosition + lastNodeSize, slice);
-     dispatch(tr.scrollIntoView());
-//      .step(new ReplaceStep(lastPosition + lastNodeSize, lastPosition + lastNodeSize, slice, false)).scrollIntoView());
+      tr.replace(lastPosition, lastPosition, slice);
+    }
+    else if (relationship === 'cousin') {
+      const slice = state.doc.slice(range.start, range.end);
+      //    console.log(slice.toString());
 
-     return true;
+      tr.replace(lastPosition + lastNodeSize, lastPosition + lastNodeSize, slice);
+    }
+    else if (relationship === 'uncle') {
+      const slice = state.doc.slice(range.start, range.end);
+      //      console.log(slice.toString());
+
+      const listNode = range.parent.copy(slice.content); // Create <ul><li>xxx</li></ul>
+      const tmpNode = itemType.create(null, listNode); // Create <li><ul><li>xxx</li></ul></li> temporally
+      const newSlice = tmpNode.slice(0); // Slice drops wrapping tags. Result slice is <ul><li>xxx</li></ul>
+      tr.replace(lastPosition + lastNodeSize - 1, lastPosition + lastNodeSize - 1, newSlice);
+    }
+    dispatch(tr.scrollIntoView());
+    //     console.log(tr.doc.toString());
+
+    return true;
+  }
+}
+
+
+export function slideDownListItem(itemType) {
+  return function (state, dispatch) {
+    // console.log(state.doc.toString());
+    let { $from, $to } = state.selection
+    // let range = $from.blockRange($to); // <p>...</p>
+    let range = $from.blockRange($to, node => node.childCount && node.firstChild.type == itemType) // <li>...</li>
+    if (!range) return false
+    if (!dispatch) return true
+
+    const $rangeStart = state.doc.resolve(range.start);
+    const parentStartPos = $rangeStart.blockRange($rangeStart).start;
+
+    let relationship = '';
+
+    //     console.log(`selected range ${range.start} : ${range.end}`);
+    const sameDepthAfter = [];
+    let firstPosition = 0;
+    let firstNodeSize = 0;
+    state.doc.nodesBetween(range.end, state.doc.content.size, (node, pos, parent, index) => {
+      const info = `(${node.type.name}) pos: ${pos}, depth: ${state.doc.resolve(pos).depth} in ${parent.type.name} at ${index}`;
+      // console.log(info);
+      if (pos === 0) return;
+      const $pos = state.doc.resolve(pos);
+      if (node.type === itemType && parentStartPos === $pos.blockRange($pos).start) {
+        sameDepthAfter.push(info);
+        firstPosition = pos;
+        firstNodeSize = node.nodeSize;
+        relationship = 'sibling';
+      }
+      else if (node.type === itemType && state.doc.resolve(pos).depth === range.depth) {
+        sameDepthAfter.push(info);
+        if (firstPosition === 0) {
+          firstPosition = pos;
+          firstNodeSize = node.nodeSize;
+          relationship = 'cousin';
+        }
+      }
+      else if (node.type === itemType && state.doc.resolve(pos).depth === range.depth - 2) {
+        let hasList = false;
+        node.forEach(child => {
+          if (child.type.name === 'bullet_list' || child.type.name === 'ordered_list') hasList = true;
+        });
+        if (!hasList) {
+          sameDepthAfter.push(info);
+          if (firstPosition === 0) {
+            firstPosition = pos;
+            firstNodeSize = node.nodeSize;
+            relationship = 'uncle';
+          }
+        }
+      }
+      if (node.type.name === 'text') {
+        //        console.log(`  # ${node.text}`);
+      }
+    })
+    /*
+    console.log("\n---\nSame depth after:");
+    sameDepthAfter.forEach(info => {
+     console.log(info);
+    });
+
+    console.log('\nDo slideUp');
+    */
+    if (firstPosition === 0) {
+      return false;
+    }
+    // console.log(`move to: ${relationship} ${(firstPosition + firstNodeSize)}`);
+    const tr = state.tr;
+    let deletedSize = 0;
+    if (range.parent.childCount === 1) {
+      // Delete empty parent
+      deletedSize = range.end - range.start + 2;
+      tr.delete(range.start - 1, range.end + 1);
+    }
+    else {
+      deletedSize = range.end - range.start;
+      tr.delete(range.start, range.end);
+    }
+
+    // console.log(tr.doc.toString());
+    if (relationship === 'sibling') {
+      const slice = state.doc.slice(range.start, range.end);
+      // console.log(slice.toString());
+      // console.log(firstPosition + firstNodeSize - deletedSize);
+      tr.replace(firstPosition + firstNodeSize - deletedSize, firstPosition + firstNodeSize - deletedSize, slice);
+    }
+    else if (relationship === 'cousin') {
+      const slice = state.doc.slice(range.start, range.end);
+      // console.log(slice.toString());
+      // console.log(firstPosition - deletedSize);
+      tr.replace(firstPosition - deletedSize, firstPosition - deletedSize, slice);
+    }
+    else if (relationship === 'uncle') {
+      const slice = state.doc.slice(range.start, range.end);
+      // console.log(slice.toString());
+
+      const listNode = range.parent.copy(slice.content); // Create <ul><li>xxx</li></ul>
+      // console.log('listNode: ' + listNode.toString());
+      const tmpNode = itemType.create(null, listNode); // Create <li><ul><li>xxx</li></ul></li> temporally
+      const newSlice = tmpNode.slice(0); // Slice drops wrapping tags. Result slice is <ul><li>xxx</li></ul>
+      // console.log('newSlice: ' + newSlice.toString());
+      tr.replace(firstPosition + firstNodeSize- deletedSize - 1, firstPosition + firstNodeSize - deletedSize - 1, newSlice);
+    }
+    dispatch(tr.scrollIntoView());
+    // console.log(tr.doc.toString());
+
+    return true;
   }
 }

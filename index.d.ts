@@ -76,7 +76,13 @@ export function sinkListItem<S extends Schema = any>(
 /**
  * Create a command to slide the list item up.
  */
-export function slideUpListItem<S extends Schema = any>(
+ export function slideUpListItem<S extends Schema = any>(
+  itemType: NodeType<S>,
+): (state: EditorState<S>, dispatch?: (tr: Transaction<S>) => void) => boolean;
+/**
+ * Create a command to slide the list item down.
+ */
+ export function slideDownListItem<S extends Schema = any>(
   itemType: NodeType<S>,
 ): (state: EditorState<S>, dispatch?: (tr: Transaction<S>) => void) => boolean;
 

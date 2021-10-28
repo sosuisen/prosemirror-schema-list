@@ -241,22 +241,38 @@ describe("slideUpListItem", () => {
 
 
 describe("slideDownListItem", () => {
-  let slideUp = slideDownListItem(schema.nodes.list_item)
+  let slideDown = slideDownListItem(schema.nodes.list_item)
   
-  it("slides the item down to the position after its younger sibling", () =>
+  it("slides the item down to the position after its younger sibling (1)", () =>
     apply(
       doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
         li(p("2"), ul(li(p("2<a><b>-1"), ul(li(p("2-1-1")))), li("2-2"))),
         li(p("3"))
       )
       ),
-      slideUp,
+      slideDown,
       doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
         li(p("2"), ul(li("2-2"), li(p("2-1"), ul(li(p("2-1-1")))))),
         li(p("3"))
       )
       )
     )
+  );
+
+  it("slides the item down to the position after its younger sibling (2)", () =>
+  apply(
+    doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
+      li(p("2"), ul(li(p("2<a><b>-1"), ul(li(p("2-1-1")))), li("2-2"), li("2-3"))),
+      li(p("3"))
+    )
+    ),
+    slideDown,
+    doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
+      li(p("2"), ul(li("2-2"), li(p("2-1"), ul(li(p("2-1-1")))), li("2-3"))),
+      li(p("3"))
+    )
+    )
+  )
   );
 
   it("removes parent and slides the item down to the position before its cousin when it is only child", () =>
@@ -266,7 +282,7 @@ describe("slideDownListItem", () => {
         li(p("3"), ul(li(p("3-1"), ul(li(p("3-1-1"))))))
       )
       ),
-      slideUp,
+      slideDown,
       doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
         li(p("2")),
         li(p("3"), ul(li(p("2-1"), ul(li(p("2-1-1")))), li(p("3-1"), ul(li(p("3-1-1"))))))
@@ -281,7 +297,7 @@ describe("slideDownListItem", () => {
         li(p("3"), ul(li(p("3-1"), ul(li(p("3-1-1"))))))
       )
       ),
-      slideUp,
+      slideDown,
       doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
         li(p("2"), ul(li("2-1"))),
         li(p("3"), ul(li(p("2-2"), ul(li(p("2-2-1")))), li(p("3-1"), ul(li(p("3-1-1"))))))
@@ -297,7 +313,7 @@ describe("slideDownListItem", () => {
         li(p("3"))
       )
       ),
-      slideUp,
+      slideDown,
       doc(ul(li(p("1"), ul(li(p("1-1"), ul(li(p("1-1-1")))))),
         li(p("2"), ul(li("2-1"))),
         li(p("3"), ul(li(p("2-2"), ul(li(p("2-2-1"))))))

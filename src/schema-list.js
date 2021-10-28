@@ -488,7 +488,7 @@ export function slideDownListItem(itemType) {
 
     let relationship = '';
 
-    //     console.log(`selected range ${range.start} : ${range.end}`);
+    // console.log(`selected range ${range.start} : ${range.end}`);
     const sameDepthAfter = [];
     let firstPosition = 0;
     let firstNodeSize = 0;
@@ -499,9 +499,11 @@ export function slideDownListItem(itemType) {
       const $pos = state.doc.resolve(pos);
       if (node.type === itemType && parentStartPos === $pos.blockRange($pos).start) {
         sameDepthAfter.push(info);
-        firstPosition = pos;
-        firstNodeSize = node.nodeSize;
-        relationship = 'sibling';
+        if (firstPosition === 0) {
+          firstPosition = pos;
+          firstNodeSize = node.nodeSize;
+          relationship = 'sibling';
+        }
       }
       else if (node.type === itemType && state.doc.resolve(pos).depth === range.depth) {
         sameDepthAfter.push(info);
@@ -526,21 +528,21 @@ export function slideDownListItem(itemType) {
         }
       }
       if (node.type.name === 'text') {
-        //        console.log(`  # ${node.text}`);
+        // console.log(`  # ${node.text}`);
       }
     })
-    /*
-    console.log("\n---\nSame depth after:");
+
+    // console.log("\n---\nSame depth after:");
     sameDepthAfter.forEach(info => {
-     console.log(info);
+      // console.log(info);
     });
 
-    console.log('\nDo slideUp');
-    */
+    // console.log('\nDo slideDown');
+
     if (firstPosition === 0) {
       return false;
     }
-    // console.log(`move to: ${relationship} ${(firstPosition + firstNodeSize)}`);
+    // console.log(`move to: ${relationship} ${firstPosition} + ${firstNodeSize} = ${(firstPosition + firstNodeSize)}`);
     const tr = state.tr;
     let deletedSize = 0;
     if (range.parent.childCount === 1) {

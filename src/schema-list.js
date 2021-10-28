@@ -162,25 +162,39 @@ export function splitListItem(itemType) {
     let createChild = false;
     const parentStart = $from.before($from.depth - 1); // start position of parent
     if ($to.pos === range.end - 1) {
-      range.parent.forEach((child, offset) => {
-        if (!createChild) {
-          if (child.type.name === 'bullet_list' || child.type.name === 'ordered_list') {
-            if (dispatch) {
-              // e.g.) <ul><li><p>xxx</p><ul><li><p>
-              // parentStart from heading <ul> mark is 1.
-              // Extra 1 is length of parent <li> mark.
-              // Offset is 5. It is child <ul>'s offset from just after parent <li> mark.
-              // 3 is length of child's <ul><li><p> marks.
-              const splitPos = parentStart + 1 + offset + 3;
-              // Don't use state.doc in chained Transforms because the state is persistent.
-              // Use tr.doc to get the updated document in the current chain.
-              dispatch(tr.split(splitPos, 2, types).setSelection(new TextSelection(tr.doc.resolve(splitPos))).scrollIntoView());
-              console.log(state.doc.toString());
-            }
-            createChild = true;
-          }
+      if (range.parent.attrs.collapsed) {
+        if (dispatch) {
+          const wrap = Fragment.from(itemType.createAndFill());
+          // $from.before($from.depth - 1)); // Positin of parent <li>
+          // $from.after($from.depth - 1)); // Positin of parent </li>
+          const start = $from.after($from.depth - 1);
+          const tr = state.tr.replace(start, start, new Slice(wrap, 0, 0));
+          tr.setSelection(new TextSelection(tr.doc.resolve(start + 2)));
+          dispatch(tr.scrollIntoView());
         }
-      });
+        return true;
+      }
+      else {
+        range.parent.forEach((child, offset) => {
+          if (!createChild) {
+            if (child.type.name === 'bullet_list' || child.type.name === 'ordered_list') {
+              if (dispatch) {
+                // e.g.) <ul><li><p>xxx</p><ul><li><p>
+                // parentStart from heading <ul> mark is 1.
+                // Extra 1 is length of parent <li> mark.
+                // Offset is 5. It is child <ul>'s offset from just after parent <li> mark.
+                // 3 is length of child's <ul><li><p> marks.
+                const splitPos = parentStart + 1 + offset + 3;
+                // Don't use state.doc in chained Transforms because the state is persistent.
+                // Use tr.doc to get the updated document in the current chain.
+                dispatch(tr.split(splitPos, 2, types).setSelection(new TextSelection(tr.doc.resolve(splitPos))).scrollIntoView());
+                console.log(state.doc.toString());
+              }
+              createChild = true;
+            }
+          }
+        });
+      }
     }
     if (createChild) return true;
 
@@ -391,7 +405,7 @@ export function slideUpListItem(itemType) {
       // console.log(info);
       if (pos === 0) return;
       const $pos = state.doc.resolve(pos);
-      if (node.type === itemType && parentStartPos === $pos.blockRange($pos).start){
+      if (node.type === itemType && parentStartPos === $pos.blockRange($pos).start) {
         sameDepthBefore.push(info);
         lastPosition = pos;
         lastNodeSize = node.nodeSize;
@@ -460,7 +474,7 @@ export function slideUpListItem(itemType) {
       moveTo = lastPosition + lastNodeSize - 1
       tr.replace(moveTo, moveTo, newSlice);
     }
-    
+
     tr.setSelection(new TextSelection(tr.doc.resolve(moveTo + selectionOffsetFrom), tr.doc.resolve(moveTo + selectionOffsetTo)));
 
     dispatch(tr.scrollIntoView());
@@ -580,10 +594,10 @@ export function slideDownListItem(itemType) {
       const tmpNode = itemType.create(null, listNode); // Create <li><ul><li>xxx</li></ul></li> temporally
       const newSlice = tmpNode.slice(0); // Slice drops wrapping tags. Result slice is <ul><li>xxx</li></ul>
       // console.log('newSlice: ' + newSlice.toString());
-      moveTo = firstPosition + firstNodeSize- deletedSize - 1;
+      moveTo = firstPosition + firstNodeSize - deletedSize - 1;
       tr.replace(moveTo, moveTo, newSlice);
     }
-    
+
     tr.setSelection(new TextSelection(tr.doc.resolve(moveTo + selectionOffsetFrom), tr.doc.resolve(moveTo + selectionOffsetTo)));
 
     dispatch(tr.scrollIntoView());
